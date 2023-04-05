@@ -29,7 +29,7 @@ LABEL maintainer="requarks.io"
 RUN apk add bash curl git openssh gnupg sqlite --no-cache && \
     mkdir -p /wiki && \
     mkdir -p /logs && \
-    mkdir -p /wiki/data/content && \
+    mkdir -p /wiki/data/{content,cache,uploads} && \
     chown -R node:node /wiki /logs
 
 WORKDIR /wiki
@@ -44,11 +44,23 @@ COPY --chown=node:node ./LICENSE ./LICENSE
 
 USER node
 
-VOLUME ["/wiki/data/content"]
+#VOLUME ["/wiki/data/content"]
 
-EXPOSE 3000
-EXPOSE 3443
+#EXPOSE 3000
+#EXPOSE 3443
+EXPOSE 8080
 
-# HEALTHCHECK --interval=30s --timeout=30s --start-period=30s --retries=3 CMD curl -f http://localhost:3000/healthz
+ENV DB_SSL=true
+
+RUN  sed -i '/^ssl:.*/i \  sslOptions:\n    auto: false\n    rejectUnauthorized: false'  /wiki/config.yml
+
+RUN echo "offline: true" >> /wiki/config.yml
 
 CMD ["node", "server"]
+
+USER root
+
+RUN chgrp -R 0 /wiki /logs && \
+    chmod -R g=u /wiki /logs
+
+USER 1001
